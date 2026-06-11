@@ -1,0 +1,121 @@
+@baseUrl = http://localhost:4000
+@scenarioVersion = {{$timestamp}}
+@testEmail = test_{{scenarioVersion}}@example.com
+@testPassword = Secure@1234
+
+### Registrar usuário com sucesso (201)
+# Esperado: 201 Created, sem corpo
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john_{{scenarioVersion}}@example.com",
+  "password": "Secure@1234"
+}
+
+### Registrar com email já cadastrado (409)
+# Esperado: 409 Conflict (email duplicado)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john_{{scenarioVersion}}@example.com",
+  "password": "Secure@1234"
+}
+
+### Registrar com nome inválido (422)
+# Esperado: 422 Unprocessable Entity (nome com apenas uma palavra)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "John",
+  "email": "invalid_name_{{scenarioVersion}}@example.com",
+  "password": "Secure@1234"
+}
+
+### Registrar com email inválido (422)
+# Esperado: 422 Unprocessable Entity (email inválido)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "not-an-email",
+  "password": "Secure@1234"
+}
+
+### Registrar com senha fraca (422)
+# Esperado: 422 Unprocessable Entity (senha não atende requisitos)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "weak_pass_{{scenarioVersion}}@example.com",
+  "password": "weak"
+}
+
+###
+# Fluxo de login — registrar usuário para usar nos cenários abaixo
+# @name registerForLogin
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Login Test",
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+### Login com credenciais válidas (200)
+# Esperado: 200 OK com token JWT e user { id, name, email }
+# @name loginValid
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "{{testPassword}}"
+}
+
+### Login com e-mail inexistente (401)
+# Esperado: 401 Unauthorized (user.credentials.invalid)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "naoexiste_{{scenarioVersion}}@example.com",
+  "password": "Secure@1234"
+}
+
+### Login com senha incorreta (401)
+# Esperado: 401 Unauthorized (user.credentials.invalid)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}",
+  "password": "WrongPassword@99"
+}
+
+### Login com e-mail inválido (422)
+# Esperado: 422 Unprocessable Entity (user.email.invalid.email)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "not-an-email",
+  "password": "Secure@1234"
+}
+
+### Login com corpo incompleto — sem senha (422)
+# Esperado: 422 Unprocessable Entity (user.password.required)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{testEmail}}"
+}

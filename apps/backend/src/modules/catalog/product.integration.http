@@ -1,0 +1,129 @@
+@baseUrl = http://localhost:4000
+@scenarioVersion = {{$timestamp}}
+@adminEmail = admin_product_{{scenarioVersion}}@example.com
+@adminPassword = Secure@1234
+
+###
+# Preparar usuário autenticado para os cenários protegidos
+# @name registerAdmin
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Login admin (200)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+@authToken = {{loginAdmin.response.body.token}}
+
+### Listar produtos sem token (401)
+GET {{baseUrl}}/products
+
+### Criar produto autenticado (201)
+# @name createProduct
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Camiseta Básica",
+  "description": "Camiseta de algodão",
+  "price": 49.9,
+  "status": "active",
+  "availableOnline": true,
+  "featured": false,
+  "allowsPreOrder": false
+}
+
+### Criar produto com nome inválido (422)
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "A",
+  "price": 10,
+  "status": "active"
+}
+
+### Criar produto com preço negativo (422)
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Produto Inválido",
+  "price": -5,
+  "status": "active"
+}
+
+### Criar produto com status fora do enum (422)
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Produto Inválido",
+  "price": 10,
+  "status": "archived"
+}
+
+### Listar produtos paginado (200)
+# @name listProducts
+GET {{baseUrl}}/products?page=1&perPage=10
+Authorization: Bearer {{authToken}}
+
+@productId = {{listProducts.response.body.items[0].id}}
+
+### Obter produto por id (200)
+GET {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{authToken}}
+
+### Obter produto inexistente (404)
+GET {{baseUrl}}/products/00000000-0000-4000-8000-000000000000
+Authorization: Bearer {{authToken}}
+
+### Atualizar produto (204)
+PUT {{baseUrl}}/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Camiseta Básica Premium",
+  "description": "Camiseta de algodão premium",
+  "price": 59.9,
+  "status": "inactive",
+  "availableOnline": true,
+  "featured": true,
+  "allowsPreOrder": false
+}
+
+### Atualizar produto inexistente cria novo registro (204 — upsert via save-product)
+PUT {{baseUrl}}/products/00000000-0000-4000-8000-000000000000
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Produto Fantasma",
+  "price": 10,
+  "status": "draft"
+}
+
+### Excluir produto (204)
+DELETE {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{authToken}}
+
+### Excluir produto inexistente (404)
+DELETE {{baseUrl}}/products/00000000-0000-4000-8000-000000000000
+Authorization: Bearer {{authToken}}

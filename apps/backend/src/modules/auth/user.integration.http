@@ -1,0 +1,129 @@
+@baseUrl = http://localhost:4000
+@scenarioVersion = {{$timestamp}}
+@adminEmail = admin_{{scenarioVersion}}@example.com
+@adminPassword = Secure@1234
+@crudEmail = crud_{{scenarioVersion}}@example.com
+@crudPassword = Secure@1234
+@updatedEmail = updated_{{scenarioVersion}}@example.com
+
+###
+# Preparar usuário autenticado para os cenários protegidos
+# @name registerAdmin
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Login admin (200)
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+@authToken = {{loginAdmin.response.body.token}}
+
+### Listar usuários sem token (401)
+GET {{baseUrl}}/users
+
+### Criar usuário autenticado (201)
+# @name createUser
+POST {{baseUrl}}/users
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Crud User",
+  "email": "{{crudEmail}}",
+  "password": "{{crudPassword}}"
+}
+
+### Criar usuário com email duplicado (409)
+POST {{baseUrl}}/users
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Duplicate User",
+  "email": "{{crudEmail}}",
+  "password": "{{crudPassword}}"
+}
+
+### Criar usuário com nome inválido (422)
+POST {{baseUrl}}/users
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "John",
+  "email": "invalid_name_{{scenarioVersion}}@example.com",
+  "password": "{{crudPassword}}"
+}
+
+### Criar usuário com senha fraca (422)
+POST {{baseUrl}}/users
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Weak Pass",
+  "email": "weak_pass_{{scenarioVersion}}@example.com",
+  "password": "weak"
+}
+
+### Listar usuários paginado (200)
+# @name listUsers
+GET {{baseUrl}}/users?page=1&perPage=10
+Authorization: Bearer {{authToken}}
+
+@userId = {{listUsers.response.body.items[0].id}}
+
+### Obter usuário por id (200)
+GET {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{authToken}}
+
+### Obter usuário inexistente (404)
+GET {{baseUrl}}/users/00000000-0000-4000-8000-000000000000
+Authorization: Bearer {{authToken}}
+
+### Atualizar usuário sem alterar senha (204)
+PUT {{baseUrl}}/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Crud User Updated",
+  "email": "{{updatedEmail}}"
+}
+
+### Atualizar usuário com nova senha (204)
+PUT {{baseUrl}}/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Crud User Updated",
+  "email": "{{updatedEmail}}",
+  "password": "NewSecure@5678"
+}
+
+### Atualizar usuário com email inválido (422)
+PUT {{baseUrl}}/users/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Crud User Updated",
+  "email": "not-an-email"
+}
+
+### Excluir usuário (204)
+DELETE {{baseUrl}}/users/{{userId}}
+Authorization: Bearer {{authToken}}
